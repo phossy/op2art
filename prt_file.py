@@ -20,6 +20,7 @@ class PRTFile(object):
         self.bitmaps = []
         self.animations = []
         self.num_optional_entries = 0
+        self.extra_data = bytearray()
 
     def _ReadAndUnpack(self, fmt):
         s = struct.Struct(fmt)
@@ -184,6 +185,8 @@ class PRTFile(object):
             raise PRTLoadError('incorrect number of frames loaded (%d, expected %d)' % (num_loaded_frames, num_frames))
         if num_loaded_subframes != num_subframes:
             raise PRTLoadError('incorrect number of subframes loaded (%d, expected %d)' % (num_loaded_subframes, num_subframes))
+        # Read any data from the end of the PRT that is left
+        self.extra_data.extend(self._prt_file.read())
 
     def Write(self):
         self._WritePalettes()
@@ -231,3 +234,5 @@ class PRTFile(object):
             for ap in anim['appendix']:
                 # TODO: sanity check that the appendix list is 4 entries long
                 self._prt_file.write(struct.pack('<4I', ap[0], ap[1], ap[2], ap[3]))
+        # extra data
+        self._prt_file.write(self.extra_data)

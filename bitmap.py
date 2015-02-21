@@ -4,6 +4,8 @@ BMPs are documented here: http://en.wikipedia.org/wiki/BMP_file_format#mediaview
 
 import struct
 
+import palette
+
 BITMAPFILEHEADER = struct.Struct('<2s I hh I')
 BITMAPINFOHEADER = struct.Struct('<IiihhIIiiII')
 
@@ -12,7 +14,7 @@ class BitmapLoadError(Exception):
 
 class Bitmap(object):
     def __init__(self):
-        self.palette = None
+        self.palette = palette.Palette()
         self.width = 0
         self.height = 0
         self.data = bytearray()
@@ -37,6 +39,7 @@ class Bitmap(object):
             if self.height > 0:
                 raise BitmapLoadError('only top-down bitmaps (height < 0) are supported')
             self.height = -self.height
+            self.palette.ReadColorTable(f, num_colors=pal_len)
             f.seek(data_offset)
             padded_width = (self.width + 3) & ~3
             self.data = bytearray(f.read(padded_width * self.height))

@@ -15,6 +15,13 @@ PAL = 0  # Microsoft palette (RIFF PAL)
 TEXT = 1  # Text format (Paint Shop Pro/'JASC-PAL' format)
 ACT = 2  # Photoshop .act format
 
+# command line value: (id, extension)
+PAL_FORMATS = {
+    'pal': (PAL, 'pal'),
+    'text': (TEXT, 'pal'),
+    'act': (ACT, 'act'),
+}
+
 class PaletteLoadError(Exception):
     pass
 
