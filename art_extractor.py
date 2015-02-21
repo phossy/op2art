@@ -3,7 +3,7 @@
 
 import os
 import sys
-import yaml
+import json
 
 import bitmap
 import palette
@@ -41,14 +41,14 @@ def main(argv):
         }
         b.WriteBMP(os.path.join(bitmap_path, '%d.bmp' % i))
     print 'Dumping bitmap metadata...'
-    with open(os.path.join(base_path, 'bitmaps.yml'), 'w') as f:
-        f.write(yaml.dump(bmp_metadata, Dumper=yaml.CDumper))
+    with open(os.path.join(base_path, 'bitmaps.json'), 'w') as f:
+        json.dump(bmp_metadata, f, sort_keys=True, indent=2)
     print 'Dumping animation metadata...'
-    with open(os.path.join(base_path, 'animations.yml'), 'w') as f:
+    with open(os.path.join(base_path, 'animations.json'), 'w') as f:
         metadata = dict(enumerate(prt.animations))
         # since we don't know where to put this at the moment...
         metadata['num_optional_entries'] = prt.num_optional_entries
-        f.write(yaml.dump(metadata, Dumper=yaml.CDumper))
+        json.dump(metadata, f, sort_keys=True, indent=2)
     print 'Success!'
 
 if __name__ == '__main__':
