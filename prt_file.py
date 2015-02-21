@@ -62,6 +62,22 @@ class PRTFile(object):
                     raise PRTLoadError('unhandled tag: %s (size=%d)' % (tag, section_size))
             self.palettes.append(pal)
 
+    def _WritePalettes(self):
+        """Writes the palette information ('CPAL' format)."""
+        # Write the CPAL header
+        self._prt_file.write(struct.pack('<4s I', 'CPAL', len(self.palettes)))
+        # Write each PPAL section
+        # Each palette consists of a PPAL section (1048 bytes), followed by a head section (4), then a data section (1024, i.e. 256 * 4 for each color)
+        for pal in self.palettes:
+            # PPAL
+            self._prt_file.write(struct.pack('<4s I', 'PPAL', 1048))
+            # head
+            self._prt_file.write(struct.pack('<4s I I', 'head', 4, 1))
+            # data
+            self._prt_file.write(struct.pack('<4s I', 'data', 1024))
+            for color in pal.colors:
+                self._prt_file.write(struct.pack('<4B', color.b, color.g, color.r, color.flags))
+
     def _LoadBitmaps(self):
         """Loads the bitmap data (metadata + raw pixel data in bmp file)."""
         buf = self._bmp_file.read(14)
@@ -70,7 +86,7 @@ class PRTFile(object):
             raise PRTLoadError('OP2_ART.BMP is not a valid BMP file')
         num_bitmaps, = self._ReadAndUnpack('<I')
         for i in xrange(num_bitmaps):
-            padded_w, offset, h, w, img_type, pal_id = self._ReadAndUnpack('IIIIhh')
+            padded_w, offset, h, w, img_type, pal_id = self._ReadAndUnpack('<IIIIhh')
             if pal_id < 0 or pal_id > len(self.palettes) - 1:
                 raise PRTLoadError('bitmap %d: palette_id %d out of range' % (i, pal_id))
             bmp = bitmap.Bitmap()
@@ -83,6 +99,23 @@ class PRTFile(object):
             self._bmp_file.seek(offset + data_start)
             bmp.data = bytearray(self._bmp_file.read(padded_w * h))
             self.bitmaps.append(bmp)
+
+    def _WriteBitmaps(self):
+        """Writes the bitmap data to the bmp file."""
+        # Create one master bitmap and palette (the headers and palette info are totally ignored, the .bmp file is a glorified data buffer)
+        master_bmp = bitmap.Bitmap()
+        master_bmp.palette = palette.Palette()
+        for i in xrange(256):
+            master_bmp.palette.colors.append(palette.Color(r=0, g=0, b=0, flags=0))
+
+        # Write the bitmap metadata to the prt file
+        self._prt_file.write(struct.pack('<I', len(self.bitmaps)))
+        for bmp in self.bitmaps:
+            # TODO: sanity check the metadata here, like making sure it uses a valid palette ID, etc.
+            padded_width = (bmp.width + 3) & ~3
+            self._prt_file.write(struct.pack('<IIIIhh', padded_width, len(master_bmp.data), bmp.height, bmp.width, bmp.image_type, bmp.palette_id))
+            master_bmp.data.extend(bmp.data)
+        master_bmp.WriteBMPToOpenFile(self._bmp_file)
 
     def Load(self):
         self._LoadPalettes()
@@ -151,3 +184,50 @@ class PRTFile(object):
             raise PRTLoadError('incorrect number of frames loaded (%d, expected %d)' % (num_loaded_frames, num_frames))
         if num_loaded_subframes != num_subframes:
             raise PRTLoadError('incorrect number of subframes loaded (%d, expected %d)' % (num_loaded_subframes, num_subframes))
+
+    def Write(self):
+        self._WritePalettes()
+        self._WriteBitmaps()
+        # number of animations, frames, subframes, optional entries
+        num_frames = 0
+        num_subframes = 0
+        for anim in self.animations:
+            num_frames = num_frames + len(anim['frames'])
+            for frame in anim['frames']:
+                num_subframes = num_subframes + len(frame['subframes'])
+        self._prt_file.write(struct.pack('<I', len(self.animations)))
+        self._prt_file.write(struct.pack('<I', num_frames))
+        self._prt_file.write(struct.pack('<I', num_subframes))
+        self._prt_file.write(struct.pack('<I', self.num_optional_entries))
+
+        # animations
+        for anim in self.animations:
+            bbox = anim['bounding_box']
+            off = anim['offset']
+            self._prt_file.write(struct.pack('<IIIIIIIII', anim['unknown1'], bbox.left, bbox.top, bbox.right, bbox.bottom, off.x, off.y, anim['unknown2'],
+                    len(anim['frames'])))
+            # frames
+            for frame in anim['frames']:
+                subframes = len(frame['subframes'])
+                unknown = frame['unknown']
+                opt1 = frame['optional1']
+                opt2 = frame['optional2']
+                opt3 = frame['optional3']
+                opt4 = frame['optional4']
+                if opt1 is not None or opt2 is not None:
+                    subframes = subframes | 0x80
+                if opt3 is not None or opt4 is not None:
+                    unknown = unknown | 0x80
+                self._prt_file.write(struct.pack('<BB', subframes, unknown))
+                if opt1 is not None or opt2 is not None:
+                    self._prt_file.write(struct.pack('<2B', int(opt1), int(opt2)))
+                if opt3 is not None or opt4 is not None:
+                    self._prt_file.write(struct.pack('<2B', int(opt3), int(opt4)))
+                # subframes
+                for sf in frame['subframes']:
+                    self._prt_file.write(struct.pack('<hBBhh', sf['bitmap_id'], sf['unknown'], sf['subframe_id'], sf['offset'].x, sf['offset'].y))
+            self._prt_file.write(struct.pack('<I', anim['unknown3']))
+            # "appendix"
+            for ap in anim['appendix']:
+                # TODO: sanity check that the appendix list is 4 entries long
+                self._prt_file.write(struct.pack('<4I', ap[0], ap[1], ap[2], ap[3]))

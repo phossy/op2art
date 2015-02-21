@@ -33,7 +33,7 @@ def main(argv):
         os.mkdir(bitmap_path)
     except OSError:
         pass
-    bmp_metadata = {}
+    bmp_metadata = {'num_palettes': len(prt.palettes)}
     for i, b in enumerate(prt.bitmaps):
         bmp_metadata[i] = {
             'type': b.image_type,
