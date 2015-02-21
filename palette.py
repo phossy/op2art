@@ -18,17 +18,23 @@ class Palette(object):
     def __init__(self):
         self.colors = []
 
-    def ReadColorTable(self, f, num_colors=256):
+    def ReadColorTable(self, f, num_colors=256, reverse=False):
         """Reads the color table from open file f."""
         for i in xrange(num_colors):
             rgba = PAL_ENTRY.unpack(f.read(4))
-            self.colors.append(Color(r=rgba[0], g=rgba[1], b=rgba[2], flags=rgba[3]))
+            if reverse:
+                self.colors.append(Color(r=rgba[2], g=rgba[1], b=rgba[0], flags=rgba[3]))
+            else:
+                self.colors.append(Color(r=rgba[0], g=rgba[1], b=rgba[2], flags=rgba[3]))
 
-    def WriteColorTable(self, f):
+    def WriteColorTable(self, f, reverse=False):
         """Writes the color table to open file f."""
         # Color data (windows LOGPALETTE format)
         for color in self.colors:
-            packed_color = PAL_ENTRY.pack(color.r, color.g, color.b, color.flags)
+            if reverse:
+                packed_color = PAL_ENTRY.pack(color.b, color.g, color.r, color.flags)
+            else:
+                packed_color = PAL_ENTRY.pack(color.r, color.g, color.b, color.flags)
             f.write(packed_color)
 
     def LoadPAL(self, filename):
@@ -46,7 +52,7 @@ class Palette(object):
                 raise PaletteLoadError('Expected version 0x0300, got %x' % pal_ver)
             if pal_size != pal_colors * 4 + 4:
                 raise PaletteLoadError('Invalid palette size (%d, expected %d)' % (pal_size, pal_colors * 4 + 4))
-            self.ReadColorTable(f, num_colors=pal_colors)
+            self.ReadColorTable(f, num_colors=pal_colors, reverse=True)
 
     def WritePAL(self, filename):
         """Writes the palette to filename in Microsoft PAL format."""
@@ -57,4 +63,4 @@ class Palette(object):
             riff_header = RIFF_HEADER.pack('RIFF', len(data_header))
             f.write(riff_header)
             f.write(data_header)
-            self.WriteColorTable(f)
+            self.WriteColorTable(f, reverse=True)
