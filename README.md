@@ -8,10 +8,14 @@ You need to install PyYAML.  Make sure it compiles libyaml, otherwise the dumpin
     $ pip install -r requirements.txt
 
 ## Usage
+
+### Dumping
+
 Make sure you have copies of op2\_art.prt and op2\_art.bmp.
 
 Run art\_extractor.py:
-    $ art_extractor.py <path to op2_art.prt> <path to op2_art.bmp> <directory in which you want the output files>
+
+    $ art_extractor.py <path to op2_art.prt> <path to op2_art.bmp> <output dir>
 
 This will produce the following outputs in the directory specified:
 - `palettes/*.pal` - palette files in Microsoft RIFF PAL format (most graphics editing software should be able to handle these). The name of the file is the
@@ -19,12 +23,29 @@ This will produce the following outputs in the directory specified:
 - `bitmaps/*.bmp` - bitmap files in Microsoft BMP format. Again, the name of the file is the bitmap index. Most bitmaps are 8bpp (a handful of image types are
   1bpp). The color table is embedded in the bitmap file for display, but of course this will be ignored by the code that repacks the PRT (when I get around to
   that).
-- `bitmaps.yml` - metadata information about the bitmaps in YAML format (currently just a mapping of ID to palette index and type)
+- `bitmaps.yml` - metadata information about the bitmaps in YAML format (currently just a mapping of ID to palette index and type) as well as the number of
+  palettes.
 - `animations.yml` - animation metadata. This makes up the vast majority of information in the PRT file, containing information such as bounding boxes, frame
   and subframe information, "unknown" fields such as "optional" data and "appendices", etc.
 
-## FAQ/Caveats
+Go ahead and edit the files to your heart's content.
 
+### Rebuilding
+
+Run art\_builder.py:
+
+    $ art_builder.py <input dir> <path to op2_art.prt> <path to op2_art.bmp>
+
+This will repack the metadata, bitmaps, and palettes in the input directory back into the PRT/BMP files.  Note that the output files will be overwritten.
+
+## Known Issues/Caveats
+
+- Very little validation is done on the input data when building the PRT/BMP. If you mess up the metadata, it will probably produce an invalid PRT file.
+- If the PRT file is damaged, Outpost2.exe will simply fail to start with no warning or error message whatsoever.
+- The output .BMP file is larger than the original one (this is likely due to incorrect alignment as well as the fact that too much data is read/stored for 1bpp
+  graphics), though it seems to work fine in game.
+- The output .PRT is smaller than the original one. This likely means there's additional data at the end of the file. In any case, the game doesn't read this
+  data and we don't know what it's used for (yet).
 - The animation metadata file also contains a `num_optional_entries` entry, since I didn't know where else to put this and it's not clear what this number
   actually represents. (it is not the number of "optional" data blocks or appendices), so we have to store it for now and reuse it when importing the data.
 - Only tested on OS X 10.10, using homebrew versions of python and PyYAML, but I'm sure any OS will do if python is installed.
