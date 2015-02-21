@@ -3,7 +3,7 @@
 
 import os
 import sys
-import json
+import yaml
 
 import bitmap
 import palette
@@ -20,8 +20,8 @@ def main(argv):
         with open(argv[3], 'wb') as bmp:
             prt = prt_file.PRTFile(prt, bmp)
             print 'Loading bitmaps...'
-            with open(os.path.join(base_path, 'bitmaps.json'), 'r') as f:
-                bmp_metadata = json.load(f)
+            with open(os.path.join(base_path, 'bitmaps.yml'), 'r') as f:
+                bmp_metadata = yaml.load(f.read(), Loader=yaml.CLoader)
                 num_palettes = bmp_metadata['num_palettes']
                 del bmp_metadata['num_palettes']
                 for k in sorted(bmp_metadata.iterkeys()): 
@@ -37,8 +37,8 @@ def main(argv):
                 pal.LoadPAL(os.path.join(palette_path, '%d.pal' % i))
                 prt.palettes.append(pal)
             print 'Loading animation metadata...'
-            with open(os.path.join(base_path, 'animations.json'), 'r') as f:
-                metadata = json.load(f)
+            with open(os.path.join(base_path, 'animations.yml'), 'r') as f:
+                metadata = yaml.load(f.read(), Loader=yaml.CLoader)
                 prt.num_optional_entries = metadata['num_optional_entries']
                 del metadata['num_optional_entries']
                 for k in sorted(metadata.iterkeys()):
