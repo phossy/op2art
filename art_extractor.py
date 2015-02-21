@@ -20,6 +20,10 @@ def main(argv):
             prt.Load()
     print 'Dumping palettes...'
     base_path = argv[3]
+    try:
+        os.mkdir(base_path)
+    except OSError:
+        pass
     palette_path = os.path.join(base_path, 'palettes')
     bitmap_path = os.path.join(base_path, 'bitmaps')
     try:
@@ -27,7 +31,7 @@ def main(argv):
     except OSError:
         pass
     for i, p in enumerate(prt.palettes):
-        p.WritePAL(os.path.join(palette_path, '%d.pal' % i))
+        p.WritePAL(os.path.join(palette_path, '%d.act' % i), file_format=palette.ACT)
     print 'Dumping bitmaps...'
     try:
         os.mkdir(bitmap_path)

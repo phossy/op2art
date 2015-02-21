@@ -34,7 +34,7 @@ def main(argv):
             print 'Loading palettes...'
             for i in xrange(num_palettes):
                 pal = palette.Palette()
-                pal.LoadPAL(os.path.join(palette_path, '%d.pal' % i))
+                pal.LoadPAL(os.path.join(palette_path, '%d.act' % i), file_format=palette.ACT)
                 prt.palettes.append(pal)
             print 'Loading animation metadata...'
             with open(os.path.join(base_path, 'animations.yml'), 'r') as f:
